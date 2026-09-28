@@ -1,0 +1,32 @@
+# A3 — Video replay en pantalla
+#
+# El caso serio. Derrota parpadeo, micro-movimiento y a veces rPPG.
+# La contramedida principal NO es una señal, es el protocolo: retos
+# impredecibles ligados al tiempo (CLAUDE.md §5 y §6).
+#
+# Si algún día el guion se filtra al cliente, este caso pasa a APCER ~100%.
+# Por eso `expect_protocol` es parte del test, no una nota al margen.
+id: a3_video_replay
+family: video_replay
+description: Vídeo pregrabado del usuario legítimo reproducido en una pantalla.
+expect:
+  decision: spoof
+expect_protocol:
+  # Invariantes que el runner debe verificar en la traza WebSocket.
+  server_never_sends: [script, challenges, challenge_index, challenge_total, next_challenge, seed]
+  one_active_challenge_at_a_time: true
+  challenge_params_unpredictable: true
+variants:
+  - { id: a3_loop_basic,        display: phone_oled,  content: idle_loop }
+  - { id: a3_with_blinks,       display: phone_oled,  content: blinking }
+  - { id: a3_with_head_motion,  display: tablet,      content: head_turns }
+  - { id: a3_high_bitrate,      display: monitor_4k,  content: head_turns, bitrate: high }
+  - { id: a3_adaptive_operator, display: monitor_4k,  content: library, operator: human_selects_clip }
+metrics:
+  - apcer
+signals_of_interest:
+  - color_response_latency_ms
+  - color_response_r
+  - moire_peak_ratio
+  - flow_face_bg_ratio
+  - depth_parallax_ratio

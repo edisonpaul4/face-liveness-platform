@@ -1,0 +1,182 @@
+# Perfil de decisión del orquestador.
+#
+# Este fichero decide quién pasa y quién no. Vive fuera del binario, se
+# versiona y se recarga en caliente: mover un umbral es una operación de
+# producto que ocurre a menudo y no puede costar un despliegue.
+#
+# La versión y el resumen del fichero viajan con CADA resultado. Sin eso, un
+# veredicto del mes pasado no se puede reproducir ni explicar, y un rechazo que
+# no se puede explicar no se puede recurrir.
+#
+# ⚠ SIN CALIBRAR con material real. Los números salen del banco sintético del
+# analizador. Los definitivos tienen que salir de /bench.
+
+version: "2026-08-24.1"
+description: >
+  Perfil inicial. Pesos puestos a mano a partir de lo que separa cada señal en
+  el banco sintético. Umbrales conservadores: ante la duda, reintentar.
+
+# --- pesos -------------------------------------------------------------------
+#
+# PUESTOS A MANO. No salen de ningún modelo, y es deliberado: hasta entender
+# qué aporta cada señal, un peso aprendido sería un número que nadie sabe
+# defender delante de un rechazo.
+#
+# Suman 1 para que el score se lea como lo que es: una media ponderada en
+# [0,1]. Si no sumaran, los umbrales de abajo dejarían de significar nada.
+weights:
+  # Lo único que separa un rostro de una foto impresa: las dos siguen al
+  # destello igual de bien, pero sólo una tiene relieve.
+  flash_gradient_3d: 0.17
+  # Lo único que separa un rostro de una superficie plana en movimiento.
+  pose_parallax: 0.15
+  # Las dos que delatan una pantalla.
+  flash_screen_absence: 0.12
+  flash_correlation: 0.12
+  # Que mirara al punto que apareció ahora en una esquina al azar. Es de la
+  # misma familia que el destello —reto-respuesta atado a este instante— y
+  # por eso pesa parecido a sus señales.
+  gaze_response: 0.11
+  # Los dos clasificadores pasivos. **No son dos vistas**: aunque los pesos de
+  # MiniFASNet declaren escalas de recorte distintas (2.7 y 4), ninguna de las
+  # dos se alcanza. El recorte se limita por el encuadre, y con una cara
+  # cercana —que es lo que exige el gate de encuadre— el límite manda siempre.
+  # Medido: 0 de 147 archivos del banco llegan a 2.7. Los dos modelos ven el
+  # MISMO recorte.
+  #
+  # Por eso el peso NO va repartido a partes iguales, como estaba: eso contaba
+  # una sola medida dos veces. Va donde separa. Medido en AUC sobre el banco,
+  # con 24 caras reales frente a 118 ataques:
+  #
+  #     v2    0.968      v1se   0.928      combinados   0.949-0.954
+  #
+  # Combinarlos es PEOR que v2 solo, y v1se sólo gana en dos categorías de
+  # cinco muestras cada una. Se le deja peso testimonial en vez de quitarlo:
+  # veinticuatro caras reales no bastan para retirar un modelo, y v1se puede
+  # servir contra ataques que este banco no tiene.
+  texture_pad_v2: 0.06
+  texture_pad_v1se: 0.02
+  # Si la piel late. Es la ÚNICA señal que una máscara no puede fingir: todo
+  # lo demás delata una superficie, y una máscara de silicona no lo es —tiene
+  # volumen, gira con la cabeza y devuelve relieve al destello—. Medido en
+  # /bench, se cuela en el 55-73 % de los casos.
+  #
+  # Pesa poco por dos motivos, y ninguno es que importe poco:
+  #
+  #  1. Está SIN CALIBRAR contra ataques reales. La normalización de dB a 0-1
+  #     sale de señal sintética.
+  #  2. Con el guion actual casi nunca se puede medir: hace falta un tramo de
+  #     diez segundos seguidos sin destellos, y una sesión son veinte con uno
+  #     en medio. Cuando no se mide, sale de la fusión y no penaliza a nadie.
+  #
+  # Subirle el peso exige antes darle un tramo tranquilo en el guion. Ver
+  # bench/RESULTS.md.
+  rppg_snr: 0.04
+  # Que el movimiento sea de un cuello y no de un corte de vídeo.
+  pose_continuity: 0.06
+  # Que hiciera lo que se le pidió. Poco peso: cumplir es fácil de fingir.
+  pose_compliance: 0.05
+  # Que respondiera a ritmo humano.
+  temporal_plausibility: 0.05
+  # Que siguiera siendo la misma cara.
+  pose_identity: 0.03
+  # Que hubiera con qué medir.
+  capture_quality: 0.02
+
+# --- suelos por señal --------------------------------------------------------
+#
+# Una señal por debajo de su suelo veta por sí sola, sin importar la media.
+# Existen porque hay evidencias que no se compensan: que el destello no
+# produzca relieve no lo arregla haber girado muy bien la cabeza.
+#
+# Todos los motivos de esta sección son acusaciones. Un suelo con motivo de
+# calidad no se carga: el perfil se rechaza al validarlo.
+floors:
+  flash_gradient_3d:
+    min: 0.30
+    code: attack_flat_surface       # foto impresa: responde plano
+  flash_screen_absence:
+    min: 0.35
+    code: attack_emissive_surface   # pantalla: brilla y no modula
+  flash_correlation:
+    min: 0.30
+    code: attack_no_color_response  # la piel no siguió a los colores
+  pose_parallax:
+    min: 0.25
+    code: attack_planar_motion      # el giro lo explica un plano
+  # pose_identity NO lleva suelo, y es la misma razón que los clasificadores
+  # pasivos: no puede acusar una señal cuya tasa de falsos positivos conocemos
+  # y es alta.
+  #
+  # Medido sobre un sujeto legítimo, ventana a ventana: 0 · 0,1178 · 0,2239 ·
+  # 0,3335 · 0,3834 · 0,6582 · 0,7499 · 0,8301 · 0,9832. Con el suelo en 0,35
+  # rechazó DOS sesiones reales por `attack_identity_change`, ambas con las
+  # miradas aceptadas y el paralaje en 1.
+  #
+  # La causa es de fondo y no se arregla afinando: los embeddings de
+  # reconocimiento facial son sensibles a la POSE, y esta ventana existe justo
+  # para pedir un giro grande. Reproducido sobre la grabación de la segunda:
+  # en un yaw_left de 25° la similitud entre frames consecutivos baja a 0,405 y
+  # el promedio local de antes contra el de después da 0,311, sin que nadie
+  # haya cambiado de cara. No hay umbral que separe girar de sustituir mientras
+  # el rasgo que se mide cambie con el giro.
+  #
+  # Sigue pesando en la media (0,03). Lo que pierde es el veto. Y lo que
+  # defendía —sustituir la cara a mitad de sesión— está declarado FUERA DE
+  # ALCANCE en §5: deepfakes en tiempo real e inyección en el driver de cámara.
+  # Un suelo que no cubre su amenaza y rechaza a personas reales es coste sin
+  # beneficio.
+  #
+  # Para recuperarlo hace falta un rasgo invariante a la pose, o medir la
+  # identidad sólo en tramos sin rotación.
+  pose_continuity:
+    min: 0.30
+    code: temporal_trajectory_discontinuity  # salto imposible
+  gaze_response:
+    min: 0.25
+    code: attack_no_gaze_response   # no miró al punto que apareció ahora
+
+# Ninguno de los dos clasificadores lleva suelo, y es deliberado.
+#
+# Un suelo veta por sí solo, y estos clasificadores todavía no se han medido
+# contra un ataque real: sólo se ha comprobado que no rechazan a una persona
+# de verdad. Dejarles vetar sería darle poder de acusación a un modelo cuya
+# tasa de falsos positivos no conocemos. Pesan en la media, y hasta que /bench
+# diga otra cosa, ahí se quedan.
+
+# --- bandas ------------------------------------------------------------------
+#
+# Tres, no dos. La banda intermedia es deliberada: sin ella habría que decidir
+# a cara o cruz justo donde no hay evidencia, y en la duda no se acusa a nadie.
+thresholds:
+  pass_min: 0.75      # a partir de aquí, aprobado
+  reject_max: 0.45    # por debajo, rechazado
+                      # entre ambos: reintentar
+
+# --- calidad mínima ----------------------------------------------------------
+#
+# Antes de acusar a nadie hay que haber podido medir. Todo lo de aquí lleva a
+# reintentar, nunca a rechazo.
+quality:
+  min_signals: 3                     # señales discriminantes mínimas
+  min_capture_quality: 0.35
+  require_completed_challenges: true
+
+capture:
+  sharpness_reference: 45.0          # varianza del laplaciano
+  min_brightness: 0.20
+  max_brightness: 0.85
+  max_highlight_saturation: 0.12
+  min_face_coverage: 0.70
+
+# --- reintentos --------------------------------------------------------------
+#
+# Cada reintento le da al atacante otra tirada con un guion nuevo, así que hay
+# tope. Al agotarse NO se rechaza: se escala a revisión manual, porque rechazar
+# a alguien porque su cámara es mala tres veces sigue siendo rechazarlo por su
+# cámara.
+retry:
+  max_attempts: 3
+  backoff: [5s, 30s, 120s]
+  window: 30m
+  escalate_on_exhaustion: true

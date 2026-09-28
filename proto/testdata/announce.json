@@ -1,0 +1,8 @@
+{
+  "worker_id": "analyzer-1",
+  "capacity": 8,
+  "sessions": 2,
+  "in_flight": 1,
+  "version": "analyzer-py-1",
+  "emitted_at_us": 1787500000000000
+}

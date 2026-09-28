@@ -1,0 +1,186 @@
+:root { color-scheme: dark; --line: #262a33; --dim: #8b93a1; }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #0f1115;
+  color: #e6e6e6;
+}
+
+/* La capa de destello cubre TODO: el reto es que la pantalla ilumine la cara,
+   así que no puede quedarse en un rincón. */
+#flash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  background: transparent;
+}
+
+/* La capa del objetivo de mirada también cubre todo: el punto tiene que poder
+   aparecer en cualquier esquina de la PANTALLA, no del recuadro de vídeo. Un
+   objetivo encerrado en una caja pequeña pediría un desplazamiento de iris de
+   dos o tres píxeles, que es exactamente el ruido de la medida. */
+#target {
+  position: fixed;
+  inset: 0;
+  z-index: 101;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease-in-out;
+  background: rgba(6, 8, 12, .94);
+}
+
+#target .dot {
+  position: absolute;
+  left: var(--target-x, 50%);
+  top: var(--target-y, 50%);
+  width: 42px;
+  height: 42px;
+  margin: -21px 0 0 -21px;
+  border-radius: 50%;
+  background: #ffd23f;
+  box-shadow: 0 0 0 10px rgba(255, 210, 63, .18), 0 0 40px 6px rgba(255, 210, 63, .55);
+  animation: latido .9s ease-in-out infinite;
+}
+
+/* Late para que el ojo lo encuentre solo. Suave y por debajo de 3 Hz: un
+   parpadeo rápido es riesgo fotosensible, igual que en el destello. */
+@keyframes latido {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #target .dot { animation: none; }
+}
+
+.viewport { position: relative; }
+
+/* Guía de encuadre. Va sobre la vista previa, que está espejada, así que
+   hereda el espejo y no hay que compensarlo. */
+/* `hidden` no oculta un SVG: no es un HTMLElement, así que ni tiene la
+   propiedad `hidden` ni le llega el estilo por defecto del navegador. Hace
+   falta decirlo explícitamente, y en JS usar setAttribute y no `.hidden`. */
+.guide[hidden] { display: none; }
+
+.guide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.guide ellipse {
+  fill: none;
+  stroke: #ff6b6b;
+  stroke-width: 1.1;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+  transition: stroke 160ms linear;
+}
+.guide.ok ellipse { stroke: #4ade80; stroke-dasharray: none; stroke-width: 1.6; }
+.guide.near ellipse { stroke: #ffd23f; }
+
+header { padding: 14px 18px; border-bottom: 1px solid var(--line); }
+h1 { font-size: 15px; margin: 0; }
+.sub { color: var(--dim); font-size: 12px; margin: 4px 0 0; }
+
+main {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(300px, 380px);
+  gap: 18px;
+  padding: 18px;
+}
+@media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+
+section { border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
+
+video {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: 4px;
+  transform: scaleX(-1); /* espejo, como espera la gente */
+}
+
+.prompt { font-size: 17px; min-height: 26px; margin: 12px 0; }
+.controls { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--dim); }
+input {
+  background: #14171d; color: inherit; border: 1px solid var(--line);
+  border-radius: 4px; padding: 6px 8px; font: inherit; min-width: 220px;
+}
+button {
+  background: #1d2028; color: inherit;
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 7px 14px; font: inherit; cursor: pointer;
+}
+button:hover:not(:disabled) { background: #262a33; }
+button:disabled { opacity: .45; cursor: default; }
+
+.warning {
+  margin: 12px 0 0; padding: 8px; border-radius: 4px;
+  border: 1px solid #7a3b1f; background: #1b120c; color: #ffb27a; font-size: 12px;
+}
+
+.panel h2 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--dim); margin: 0 0 10px;
+}
+dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; margin: 0; font-size: 12px; }
+dt { color: var(--dim); }
+dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+details { margin-top: 12px; font-size: 11px; color: var(--dim); }
+pre { max-height: 220px; overflow: auto; margin: 8px 0 0; font-size: 11px; }
+
+/* Casilla de grabación. Apagada por defecto y con su aviso: lo que graba es
+   biometría, y eso no se activa por descuido. */
+.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dim);
+  cursor: pointer;
+}
+.check input { min-width: 0; }
+
+/* Tabla de detectores del modo pentest. */
+#detectors { margin-top: 14px; border: 1px solid var(--line); }
+#detectors h2 { margin-top: 0; }
+.hint { color: var(--dim); font-size: 11px; margin: -6px 0 10px; }
+#d-signals { width: 100%; border-collapse: collapse; font-size: 11px; }
+#d-signals th {
+  text-align: left; color: var(--dim); font-weight: normal;
+  border-bottom: 1px solid var(--line); padding: 3px 4px;
+}
+#d-signals td { padding: 3px 4px; border-bottom: 1px solid #1b1f27; }
+#d-signals td:nth-child(n+2) { text-align: right; font-variant-numeric: tabular-nums; }
+#d-signals tr.fail td { color: #ff8080; }
+#d-signals tr.unmeasured td { color: #5a6270; font-style: italic; }
+#d-signals td.mark { text-align: center; width: 1.4em; }
+
+/* Banco de ataques: una sola columna, es una herramienta de laboratorio. */
+main.single { grid-template-columns: 1fr; max-width: 900px; }
+.aviso {
+  border-left: 3px solid #ffd23f; padding: 8px 12px; margin: 0 0 14px;
+  font-size: 12px; color: var(--dim); background: #16181d;
+}
+.aviso strong { color: #ffd23f; }
+#senales { width: 100%; border-collapse: collapse; font-size: 12px; }
+#senales th {
+  text-align: left; color: var(--dim); font-weight: normal;
+  border-bottom: 1px solid var(--line); padding: 4px 6px;
+}
+#senales td { padding: 4px 6px; border-bottom: 1px solid #1b1f27; }
+#senales td:nth-child(n+2) { text-align: right; font-variant-numeric: tabular-nums; }
+#senales tr.fail td { color: #ff8080; }
+#resumen { grid-template-columns: 220px 1fr; }
+input[type=file] { min-width: 320px; }
+
+a { color: #7fb3ff; }

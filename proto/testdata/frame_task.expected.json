@@ -1,0 +1,12 @@
+{
+  "_comment": "Valores decodificados de frame_task.bin. Go y Python comprueban ambos contra este fichero.",
+  "version": 1,
+  "encoding": 1,
+  "flags": 1,
+  "seq": 42,
+  "captured_at_us": 1787500000000000,
+  "received_at_us": 1787500000045000,
+  "client_clock_trusted": true,
+  "payload_len": 19,
+  "payload_base64": "/9j/4EZSQU1FLVBBWUxPQUT/2Q=="
+}

@@ -1,0 +1,46 @@
+# Respuesta a destello: rostro real, foto impresa y replay en pantalla
+#
+# El control es el estímulo: la MISMA secuencia de colores, la misma cámara,
+# distinto objeto delante. Lo que separa a los tres es física, no estadística:
+#
+#   - Un rostro tiene relieve, así que la nariz recibe más luz de la pantalla
+#     que los pómulos. Responde con GRADIENTE.
+#   - Una foto impresa responde igual de bien al destello, pero es un plano:
+#     responde UNIFORME.
+#   - Una pantalla fabrica su propia luz: brilla mucho y apenas modula.
+#
+# La cámara del banco ajusta exposición y balance de blancos ponderando el
+# centro, como una webcam de verdad. Sin eso, la medición diferencial contra
+# el fondo no estaría probada, y es el problema número uno de esta técnica.
+id: a4_flash_response
+family: flash_response
+description: Respuesta cromática a una secuencia de destellos, con calibración previa.
+
+sequence:
+  - { color: white, duration_ms: 400 }   # referencia cromática
+  - { color: red,   duration_ms: 350 }
+  - { color: blue,  duration_ms: 350 }
+  - { color: green, duration_ms: 350 }
+
+calibration:
+  # Obligatoria y previa. Sin línea base no se analiza ningún destello.
+  neutral_screen_ms: 1200
+
+variants:
+  - { id: a4_real,   object: rostro_3d,    expect_high: [correlation, gradient_3d, screen_absence] }
+  - { id: a4_photo,  object: foto_impresa, expect_low:  [gradient_3d] }
+  - { id: a4_screen, object: replay,       expect_low:  [correlation, screen_absence] }
+
+# Se repite todo con cinco tonos de piel. Un tono que puntúe sistemáticamente
+# peor es un sesgo, aunque cada caso por separado pase el umbral.
+skin_tones: [muy_clara, clara, media, oscura, muy_oscura]
+
+metrics:
+  - flash_score
+  - flash_correlation
+  - flash_gradient_3d
+  - flash_screen_absence
+  - quality_insufficient_rate
+
+# Implementación sintética: analyzer/tests/flashscene.py.
+# Calibración con material real: pendiente.

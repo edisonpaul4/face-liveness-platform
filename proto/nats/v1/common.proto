@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package liveness.nats.v1;
+
+option go_package = "github.com/edisonpaul4/biometrics/proto/nats/v1;natsv1";
+
+// Formato de codificación del payload de un frame.
+enum FrameEncoding {
+  FRAME_ENCODING_UNSPECIFIED = 0;
+  FRAME_ENCODING_JPEG = 1;
+  FRAME_ENCODING_WEBP = 2;
+  FRAME_ENCODING_RGB24 = 3;
+  // Escena sintética del banco de pruebas: el payload describe lo que la
+  // cámara vería, en JSON, en vez de traer píxeles.
+  FRAME_ENCODING_SYNTHETIC_SCENE = 240;
+}
+
+// Caja de rostro normalizada [0,1] respecto al frame.
+message FaceBox {
+  float x = 1;
+  float y = 2;
+  float w = 3;
+  float h = 4;
+  float confidence = 5;
+}
+
+// Calidad de la captura. Sirve para que Go decida si un frame es utilizable;
+// no es un juicio sobre la sesión.
+message FrameQuality {
+  // Nitidez por varianza del laplaciano.
+  float sharpness = 1;
+  // Luminancia media en [0,1].
+  float brightness = 2;
+  float contrast = 3;
+  bool face_detected = 4;
+  uint32 face_count = 5;
+  // Fracción de píxeles quemados en [0,1].
+  float highlight_saturation = 6;
+}

@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package liveness.nats.v1;
+
+option go_package = "github.com/edisonpaul4/biometrics/proto/nats/v1;natsv1";
+
+// Medición de una ventana de pose. Ver /proto/subjects.md.
+
+// Go → Python, por session.<id>.window.
+//
+// Es lo mínimo que hace falta para medir, y ni un campo más. NO lleva
+// identificador de reto, ni posición en el guion, ni umbral de aprobado, ni
+// qué consecuencia tiene el resultado: Python mide geometría en un intervalo,
+// y qué signifique eso es de Go (CLAUDE.md §3).
+message PoseWindowRequest {
+  // window_id es opaco: sirve para casar la respuesta, no para ordenar nada.
+  string window_id = 1;
+  // axis: "yaw", "pitch" o "roll".
+  string axis = 2;
+  // Ángulo objetivo en grados, con signo, y margen admisible.
+  double target_deg = 3;
+  double tolerance_deg = 4;
+  // Intervalo a medir, en el reloj del SERVIDOR.
+  int64 started_at_us = 5;
+  int64 ended_at_us = 6;
+}
+
+// Python → Go, por session.<id>.challenge_score.
+//
+// Sale el resumen y las cuatro sub-métricas, normalizadas y crudas. NO sale
+// ningún veredicto.
+message ChallengeScore {
+  string window_id = 1;
+  string axis = 2;
+
+  // Resumen 0-1, media ponderada de las sub-métricas que se pudieron medir.
+  // Es un estadístico, no una decisión.
+  double score = 3;
+
+  // Sub-métricas normalizadas 0-1. Una sub-métrica AUSENTE del mapa significa
+  // "no se pudo medir", que no es lo mismo que cero: cero es "medido y malo".
+  // Confundirlos convertiría a un usuario que no llegó a girar en un
+  // atacante.
+  //
+  //   compliance  ¿alcanzó el ángulo objetivo dentro de la ventana?
+  //   continuity  ¿recorrió los ángulos intermedios, o dio un salto?
+  //   parallax    ¿el movimiento lo explica un plano? Si lo explica
+  //               demasiado bien, es una superficie plana.
+  //   identity    ¿el embedding se mantuvo, o pegó un salto?
+  map<string, double> submetrics = 4;
+
+  // Magnitudes crudas, para que Go pueda decidir con sus propios umbrales:
+  // peak_deg, angle_span_deg, max_jump_deg, discontinuity_count,
+  // rigid_residual, nonrigidity_rate, embedding_min_similarity…
+  map<string, double> raw = 5;
+
+  uint32 frames_used = 6;
+}

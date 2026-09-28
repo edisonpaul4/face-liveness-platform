@@ -1,0 +1,56 @@
+# entorno
+.env
+.env.local
+
+# go
+go.work.sum
+bin/
+*.exe
+*.test
+*.out
+
+# python
+analyzer/models/
+__pycache__/
+*.py[cod]
+# Checkpoints de modelos evaluados en el banco (FLIP pesa 647 MB): se
+# descargan, no se versionan, y GitHub rechaza ficheros de más de 100 MB.
+*.pth
+*.pth.tar
+*.onnx
+*.pkl
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# node / svelte
+node_modules/
+.svelte-kit/
+frontend/build/
+.vite/
+
+# datos y evidencia — NUNCA se versionan
+bench/fixtures/*
+!bench/fixtures/.gitkeep
+!bench/fixtures/README.md
+*.mp4
+*.mov
+*.jpg
+*.jpeg
+*.png
+!frontend/static/*.png
+
+# sistema
+.DS_Store
+*.log
+
+# Frames sintéticos del banco del cliente: se regeneran con `make web-fixtures`.
+web/harness/fixtures/
+
+# Grabaciones de depuración: biometría, no se versiona (CLAUDE.md §6bis).
+web/harness/recordings/

@@ -1,0 +1,19 @@
+{
+  "seq": 42,
+  "signals": {
+    "face_box_area": 0.0864,
+    "face_count": 1,
+    "quality_brightness": 0.512,
+    "quality_highlight_saturation": 0.031,
+    "quality_sharpness": 118.5
+  },
+  "quality": {
+    "face_detected": true,
+    "face_count": 1,
+    "sharpness": 118.5,
+    "brightness": 0.512
+  },
+  "processing_ms": 12,
+  "version": "analyzer-py-1",
+  "analyzed_at_us": 1787500000060000
+}

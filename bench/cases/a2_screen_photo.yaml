@@ -1,0 +1,23 @@
+# A2 — Foto en pantalla
+#
+# Señales que deberían separar este caso: moiré, banding de refresco, bisel,
+# reflejo especular puntual, gama de color de segunda generación, planaridad.
+id: a2_screen_photo
+family: screen_photo
+description: Imagen estática del usuario legítimo mostrada en una pantalla.
+expect:
+  decision: spoof
+variants:
+  - { id: a2_phone_oled,     display: phone_oled,   brightness: high }
+  - { id: a2_phone_lcd,      display: phone_lcd,    brightness: high }
+  - { id: a2_tablet,         display: tablet,       brightness: medium }
+  - { id: a2_monitor_4k,     display: monitor_4k,   brightness: medium }
+  - { id: a2_bezel_hidden,   display: monitor_4k,   framing: bezel_out_of_frame }
+metrics:
+  - apcer
+signals_of_interest:
+  - moire_peak_ratio
+  - banding_row_energy
+  - specular_highlight_ratio
+  - color_response_r
+  - depth_plane_residual

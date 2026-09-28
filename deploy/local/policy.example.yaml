@@ -1,0 +1,56 @@
+# Política del orchestrator — EJEMPLO, no se carga en scaffolding.
+#
+# Los umbrales y pesos son CONFIGURACIÓN, nunca constantes en el código
+# (CLAUDE.md §9). Los valores de abajo son marcadores de posición sin
+# calibrar: no significan nada hasta que exista el banco de pruebas.
+
+version: 1
+
+quality:
+  min_quality_frames: 15
+
+# El guion NUNCA se envía al cliente (CLAUDE.md §6). Esto describe cómo se
+# genera del lado servidor. Refleja orchestrator/internal/challenge.Policy:
+# si cambias un nombre aquí, cámbialo allí.
+script:
+  # Calibración: pantalla neutra antes de nada.
+  calibration_hold_ms: 1500
+  calibration_slack_ms: 1500
+
+  # Entre 2 y 4 retos, en orden aleatorio, con al menos un destello siempre
+  # presente. La longitud real de cada sesión se sortea con la semilla.
+  min_steps: 2
+  max_steps: 4
+
+  # Destello: secuencia aleatoria de colores de la paleta (blanco de
+  # referencia + primarios saturados). Es la contramedida principal contra A3:
+  # un vídeo grabado no puede responder a un color elegido ahora.
+  flash:
+    min_colors: 3
+    max_colors: 5
+    min_segment_ms: 350
+    max_segment_ms: 600
+    slack_ms: 1500
+
+  # Pose: se muestrean sin reemplazo de yaw_left, yaw_right, pitch_up,
+  # move_closer.
+  pose:
+    deadline_ms: 5000
+
+  # Reacción humana más rápida plausible. Por debajo, la respuesta es tan
+  # sospechosa como un timeout, y además NO es reintentable.
+  # Este número no se revela jamás al cliente.
+  min_reaction_ms: 350
+
+# Presupuesto total de la sesión.
+session_budget_ms: 90000
+
+# La fusión y los umbrales de decisión NO están aquí.
+#
+# Viven en deploy/policy/decision-profile.yaml, que es un fichero versionado,
+# validado al cargarse y recargable en caliente. Este de aquí sólo describe
+# cómo se GENERA el guion de retos; aquel decide quién pasa.
+#
+# Separarlos es deliberado: cambiar un umbral de decisión es una operación de
+# producto que ocurre a menudo, y no puede arrastrar consigo la configuración
+# del generador de retos.

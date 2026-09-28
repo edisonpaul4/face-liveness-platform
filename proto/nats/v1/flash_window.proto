@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package liveness.nats.v1;
+
+option go_package = "github.com/edisonpaul4/biometrics/proto/nats/v1;natsv1";
+
+// Calibración y análisis de destello. Ver /proto/subjects.md.
+
+// Go → Python, por session.<id>.window con kind="calibration".
+//
+// OBLIGATORIA antes de cualquier destello. Con pantalla neutra, el analizador
+// captura la línea base del sujeto: respuesta cromática de su piel, luz de la
+// habitación y comportamiento de esa cámara.
+//
+// Todo lo posterior se mide RELATIVO a esa línea base, nunca contra umbrales
+// absolutos. No es un detalle de implementación: con umbrales absolutos, el
+// sistema rechazaría de más a las personas de piel oscura, que devuelven menos
+// luz. Eso sería un defecto de producto.
+message CalibrationWindowRequest {
+  string window_id = 1;
+  int64 started_at_us = 2;
+  int64 ended_at_us = 3;
+}
+
+// Go → Python, por session.<id>.window con kind="flash".
+//
+// Trae la secuencia emitida porque sin ella no hay con qué correlacionar. No
+// trae ni reto, ni posición en el guion, ni umbral de aprobado.
+message FlashWindowRequest {
+  string window_id = 1;
+
+  message Segment {
+    // white, red, green o blue.
+    string color = 1;
+    uint32 duration_ms = 2;
+  }
+  repeated Segment sequence = 2;
+
+  int64 started_at_us = 3;
+  int64 ended_at_us = 4;
+}
+
+// Python → Go, por session.<id>.challenge_score con kind="flash".
+message FlashScore {
+  string window_id = 1;
+
+  // Resumen 0-1 de las sub-métricas medidas. Es un estadístico, no una
+  // decisión.
+  double score = 2;
+
+  // Sub-métricas normalizadas 0-1. Una AUSENTE significa "no se pudo medir",
+  // que no es lo mismo que cero.
+  //
+  //   correlation     ¿la piel siguió a la secuencia de colores? Se busca el
+  //                   retardo: entre pintar y ver pasan de 100 a 300 ms.
+  //   gradient_3d     ¿respondieron frente, nariz y pómulos con intensidades
+  //                   distintas? Una superficie plana responde igual en todas
+  //                   partes. Es lo único que separa un rostro de una foto.
+  //   screen_absence  1 menos la sospecha de superficie emisiva.
+  map<string, double> submetrics = 3;
+
+  // Magnitudes crudas: lag_ms, correlation, gradient_dispersion,
+  // amplitude_<región>, signal_to_noise, screen_suspicion,
+  // face_bg_luminance_ratio, face_specular_fraction, face_moire_index,
+  // face_banding_index…
+  map<string, double> raw = 4;
+
+  uint32 frames_used = 5;
+
+  // false cuando la luz ambiente aplastó el destello o faltó línea base.
+  //
+  // Lleva a REINTENTAR, nunca a rechazar a la persona: no es que se haya
+  // medido algo malo, es que no se ha podido medir.
+  bool quality_sufficient = 6;
+  string quality_reason = 7;
+}

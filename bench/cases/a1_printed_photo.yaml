@@ -1,0 +1,23 @@
+# A1 — Foto impresa
+#
+# Señales que deberían separar este caso (CLAUDE.md §5): textura/grano de
+# papel, ausencia de micro-movimiento, planaridad, reflejo difuso, sin rPPG.
+id: a1_printed_photo
+family: printed_photo
+description: Fotografía impresa del usuario legítimo presentada a la cámara.
+expect:
+  decision: spoof
+variants:
+  - { id: a1_matte_a4,       paper: matte,   size: a4,  cutouts: none }
+  - { id: a1_glossy_a4,      paper: glossy,  size: a4,  cutouts: none }
+  - { id: a1_cutout_eyes,    paper: matte,   size: a4,  cutouts: eyes }
+  - { id: a1_curved,         paper: matte,   size: a4,  deformation: curved }
+  - { id: a1_high_quality,   paper: photo,   size: 10x15, dpi: 1200 }
+metrics:
+  - apcer
+signals_of_interest:
+  - texture_lbp_energy
+  - texture_sensor_noise_std
+  - depth_plane_residual
+  - flow_rigidity
+  - rppg_snr_db

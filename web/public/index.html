@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liveness · instrumento de prueba</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <!-- Capa de destello. Cubre todo y se pinta desde flashscreen.js. -->
+  <div id="flash" aria-hidden="true"></div>
+
+  <!-- Capa del objetivo de mirada. Se coloca desde gazetarget.js. -->
+  <div id="target" aria-hidden="true"><span class="dot"></span></div>
+
+  <header>
+    <h1>Liveness · instrumento de prueba</h1>
+    <p class="sub">
+      Cliente desechable. No es el producto: es el aparato con el que se mide
+      el backend. · <a href="./analyze.html">banco de ataques</a>
+    </p>
+  </header>
+
+  <main>
+    <section class="stage">
+      <div class="viewport">
+        <video id="preview" autoplay playsinline muted></video>
+        <!-- Guía de encuadre: óvalo que se pone verde cuando la cara está
+             donde tiene que estar. -->
+        <svg id="guide" class="guide" viewBox="0 0 100 100" preserveAspectRatio="none" hidden>
+          <ellipse cx="50" cy="47" rx="26" ry="35"></ellipse>
+        </svg>
+      </div>
+      <p id="prompt" class="prompt">Pulsa «empezar» para abrir la cámara.</p>
+      <div class="controls">
+        <label>
+          Gateway
+          <input id="gateway" type="text" value="http://localhost:8080" spellcheck="false">
+        </label>
+        <label class="check" title="Se queda en esta máquina. Sirve para depurar contra datos reales.">
+          <input id="record" type="checkbox">
+          grabar la sesión
+        </label>
+        <button id="start" type="button">empezar</button>
+        <button id="begin" type="button" disabled hidden>validar</button>
+        <button id="abort" type="button" disabled>abandonar</button>
+      </div>
+      <p id="warning" class="warning" hidden></p>
+    </section>
+
+    <section class="panel" aria-live="polite">
+      <h2>panel de depuración</h2>
+      <dl id="debug">
+        <dt>estado</dt><dd id="d-phase">—</dd>
+        <dt>sesión</dt><dd id="d-session">—</dd>
+        <dt>reto activo</dt><dd id="d-challenge">—</dd>
+        <dt>fps real</dt><dd id="d-fps">—</dd>
+        <dt>frames enviados</dt><dd id="d-sent">0</dd>
+        <dt>descartados</dt><dd id="d-dropped">0</dd>
+        <dt>calidad JPEG</dt><dd id="d-quality">—</dd>
+        <dt>tamaño medio</dt><dd id="d-size">—</dd>
+        <dt>latencia saludo</dt><dd id="d-rtt">—</dd>
+        <dt>retardo de pintado</dt><dd id="d-paint">—</dd>
+        <dt>colores sin pintar</dt><dd id="d-skipped">0</dd>
+        <dt>encuadre</dt><dd id="d-framing">—</dd>
+        <dt>objetivos mirada</dt><dd id="d-gaze">0</dd>
+        <dt>filtro local</dt><dd id="d-filter">—</dd>
+        <dt>resultado</dt><dd id="d-result">—</dd>
+        <dt>score fusión</dt><dd id="d-score">—</dd>
+      </dl>
+      <!-- Desglose por detector. Sólo se rellena si el gateway corre con
+           GATEWAY_INSECURE_EXPLAIN_VERDICT: en producción el cliente no
+           recibe nada de esto (CLAUDE.md §6). -->
+      <section id="detectors" hidden>
+        <h2>detectores</h2>
+        <p class="hint">Modo pentest: el servidor está explicando su veredicto.</p>
+        <table id="d-signals">
+          <thead>
+            <tr><th>detector</th><th>valor</th><th>suelo</th><th>peso</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <details>
+        <summary>traza</summary>
+        <pre id="trace"></pre>
+      </details>
+    </section>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package liveness.nats.v1;
+
+import "nats/v1/common.proto";
+
+option go_package = "github.com/edisonpaul4/biometrics/proto/nats/v1;natsv1";
+
+// Python → Go, por session.<id>.features. Medidas, nunca decisiones.
+//
+// `signals` es un mapa abierto nombre → valor. Los nombres son snake_case,
+// con familia como prefijo y sin juicio de valor (CLAUDE.md §7).
+// Ejemplos válidos:
+//   quality_sharpness, quality_brightness, quality_highlight_saturation,
+//   face_count, face_box_area, texture_lbp_energy, rppg_snr_db
+// Ejemplos PROHIBIDOS:
+//   is_live, spoof_score, attack_detected, passed_challenge
+message FrameFeatures {
+  uint64 frame_seq = 1;
+  map<string, double> signals = 2;
+  FrameQuality quality = 3;
+  // Ausente si no se detectó rostro.
+  FaceBox face = 4;
+
+  // processing_ms es lo que costó analizar este frame. El presupuesto es de
+  // 30 ms; por encima, el worker lo registra.
+  int64 processing_ms = 5;
+  string version = 6;
+  int64 analyzed_at_us = 7;
+}

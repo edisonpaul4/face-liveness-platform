@@ -1,0 +1,19 @@
+# A0 — Presentación genuina (línea base)
+#
+# Sin esto, cualquier medida de APCER es inútil: un sistema que rechaza todo
+# tiene APCER perfecto y es inservible.
+id: a0_genuine
+family: genuine
+description: Persona real frente a la cámara, condiciones variadas.
+expect:
+  decision: live
+variants:
+  - { id: a0_indoor_bright,  lighting: indoor_bright,  device: mobile }
+  - { id: a0_indoor_dim,     lighting: indoor_dim,     device: mobile }
+  - { id: a0_backlit,        lighting: backlit,        device: desktop }
+  - { id: a0_glasses,        lighting: indoor_bright,  device: mobile, accessory: glasses }
+  - { id: a0_low_end_camera, lighting: indoor_bright,  device: mobile, camera: low_end }
+metrics:
+  - bpcer
+  - inconclusive_rate
+  - session_latency_p95

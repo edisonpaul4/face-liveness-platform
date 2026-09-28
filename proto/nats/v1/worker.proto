@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package liveness.nats.v1;
+
+option go_package = "github.com/edisonpaul4/biometrics/proto/nats/v1;natsv1";
+
+// Descubrimiento, asignación y lease. Ver /proto/subjects.md.
+
+// Python → Go, por analyzer.announce. Periódico.
+//
+// Es todo el descubrimiento que hay: si un worker no se anuncia, no existe.
+message Announce {
+  string worker_id = 1;
+  // capacity son las sesiones simultáneas que admite.
+  uint32 capacity = 2;
+  // sessions son las que lleva ahora.
+  uint32 sessions = 3;
+  uint32 in_flight = 4;
+  string version = 5;
+  int64 emitted_at_us = 6;
+}
+
+// Go → Python, por analyzer.lease.<worker_id>. Request/reply.
+message LeaseRequest {
+  string session_id = 1;
+  // deadline_us es hasta cuándo vive la sesión: pasado ese punto el worker
+  // puede soltar el estado caliente aunque no le llegue el cierre.
+  int64 deadline_us = 2;
+}
+
+message LeaseReply {
+  bool accepted = 1;
+  string worker_id = 2;
+  string reason = 3;
+}
+
+// Python → Go, por session.<id>.heartbeat. Renueva el lease.
+//
+// Si el worker calla más que el TTL, el gateway ABORTA la sesión. No se
+// intenta recuperar: ver CLAUDE.md §4.
+message SessionHeartbeat {
+  string worker_id = 1;
+  string session_id = 2;
+  uint32 in_flight = 3;
+  int64 emitted_at_us = 4;
+}
+
+// Go → Python, por session.<id>.control. Higiene de recursos únicamente.
+//
+// NO es un canal de negocio: no lleva retos, ni estado, ni instrucciones de
+// análisis condicionadas a la sesión.
+message SessionControl {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    // Suelta el estado caliente de la sesión.
+    KIND_SESSION_CLOSE = 1;
+  }
+  Kind kind = 1;
+  string session_id = 2;
+  int64 issued_at_us = 3;
+}

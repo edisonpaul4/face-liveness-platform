@@ -1,0 +1,413 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://liveness.local/proto/ws/v1/client_protocol.schema.json",
+  "title": "Liveness WebSocket protocol v1",
+  "description": "Mensajes de control JSON. Los frames viajan como binario (ver README.md). NINGÚN mensaje server→client puede revelar el guion de retos.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ClientHello"
+    },
+    {
+      "$ref": "#/$defs/ClientTelemetry"
+    },
+    {
+      "$ref": "#/$defs/ClientAbort"
+    },
+    {
+      "$ref": "#/$defs/ServerHello"
+    },
+    {
+      "$ref": "#/$defs/ServerChallenge"
+    },
+    {
+      "$ref": "#/$defs/ServerChallengeEnd"
+    },
+    {
+      "$ref": "#/$defs/ServerCaptureControl"
+    },
+    {
+      "$ref": "#/$defs/ServerResult"
+    },
+    {
+      "$ref": "#/$defs/ServerError"
+    }
+  ],
+  "$defs": {
+    "ClientHello": {
+      "title": "client_hello (client → server)",
+      "type": "object",
+      "required": [
+        "type",
+        "protocol_version",
+        "session_token"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "client_hello"
+        },
+        "protocol_version": {
+          "const": 1
+        },
+        "session_token": {
+          "type": "string",
+          "description": "token de sesión emitido por la API REST"
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "encodings": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "jpeg",
+                  "webp",
+                  "rgb24"
+                ]
+              }
+            },
+            "max_fps": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 60
+            },
+            "max_width": {
+              "type": "integer"
+            },
+            "max_height": {
+              "type": "integer"
+            },
+            "flash": {
+              "type": "boolean",
+              "description": "puede pintar la pantalla con la secuencia de colores impuesta"
+            }
+          }
+        }
+      }
+    },
+    "ClientTelemetry": {
+      "title": "client_telemetry (client → server)",
+      "description": "Pistas de captura. NO es un reporte de cumplimiento de reto.",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "client_telemetry"
+        },
+        "dropped_frames": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "actual_fps": {
+          "type": "number"
+        },
+        "camera_state": {
+          "enum": [
+            "ok",
+            "denied",
+            "lost",
+            "occluded"
+          ]
+        }
+      }
+    },
+    "ClientAbort": {
+      "title": "client_abort (client → server)",
+      "type": "object",
+      "required": [
+        "type",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "client_abort"
+        },
+        "reason": {
+          "enum": [
+            "user_cancelled",
+            "camera_unavailable",
+            "client_error"
+          ]
+        }
+      }
+    },
+    "ServerHello": {
+      "title": "server_hello (server → client)",
+      "description": "Parámetros de captura. NO incluye información del guion.",
+      "type": "object",
+      "required": [
+        "type",
+        "session_id",
+        "capture"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "server_hello"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "ULID"
+        },
+        "capture": {
+          "type": "object",
+          "required": [
+            "encoding",
+            "fps",
+            "width",
+            "height"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "encoding": {
+              "enum": [
+                "jpeg",
+                "webp",
+                "rgb24"
+              ]
+            },
+            "fps": {
+              "type": "number"
+            },
+            "width": {
+              "type": "integer"
+            },
+            "height": {
+              "type": "integer"
+            },
+            "quality": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "session_deadline_ms": {
+          "type": "integer",
+          "description": "presupuesto total de la sesión, no número de retos"
+        }
+      }
+    },
+    "ServerChallenge": {
+      "title": "server_challenge (server → client)",
+      "description": "UN paso, materializado en el momento de emitirlo. Prohibido: index, total, seed, next, list. Tampoco viaja la ventana MÍNIMA de reacción: decirle al atacante a partir de qué milisegundo su respuesta deja de ser sospechosa le regala el ataque.",
+      "type": "object",
+      "required": [
+        "type",
+        "challenge_id",
+        "kind",
+        "deadline_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "server_challenge"
+        },
+        "challenge_id": {
+          "type": "string",
+          "description": "opaco, sin orden inferible"
+        },
+        "kind": {
+          "enum": [
+            "calibration",
+            "pose",
+            "flash"
+          ],
+          "description": "calibration: pantalla neutra; pose: movimiento de cabeza o distancia; flash: secuencia de colores."
+        },
+        "params": {
+          "type": "object",
+          "description": "Parámetros del paso actual únicamente. La forma depende de kind.",
+          "oneOf": [
+            {
+              "title": "calibration",
+              "required": [
+                "hold_ms"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hold_ms": {
+                  "type": "integer",
+                  "description": "duración impuesta de la pantalla neutra"
+                }
+              }
+            },
+            {
+              "title": "pose",
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "enum": [
+                    "yaw_left",
+                    "yaw_right",
+                    "pitch_up",
+                    "move_closer"
+                  ]
+                }
+              }
+            },
+            {
+              "title": "flash",
+              "required": [
+                "sequence"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "sequence": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 5,
+                  "description": "Secuencia de colores a pintar, en orden. El primero es el blanco de referencia.",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "color",
+                      "duration_ms"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "color": {
+                        "enum": [
+                          "white",
+                          "red",
+                          "green",
+                          "blue"
+                        ]
+                      },
+                      "duration_ms": {
+                        "type": "integer",
+                        "minimum": 350,
+                        "maximum": 600
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "deadline_ms": {
+          "type": "integer",
+          "minimum": 200,
+          "description": "Plazo máximo de respuesta. El mínimo NUNCA se revela."
+        },
+        "prompt_key": {
+          "type": "string",
+          "description": "clave i18n para la UI; el texto vive en el cliente"
+        }
+      }
+    },
+    "ServerChallengeEnd": {
+      "title": "server_challenge_end (server → client)",
+      "description": "Cierra el reto activo. NO comunica si se superó: eso es del veredicto final. Tamaño y timing uniformes por diseño.",
+      "type": "object",
+      "required": [
+        "type",
+        "challenge_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "server_challenge_end"
+        },
+        "challenge_id": {
+          "type": "string"
+        }
+      }
+    },
+    "ServerCaptureControl": {
+      "title": "server_capture_control (server → client)",
+      "description": "Backpressure y ajuste de captura.",
+      "type": "object",
+      "required": [
+        "type",
+        "action"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "server_capture_control"
+        },
+        "action": {
+          "enum": [
+            "pause",
+            "resume",
+            "throttle"
+          ]
+        },
+        "target_fps": {
+          "type": "number"
+        }
+      }
+    },
+    "ServerResult": {
+      "title": "server_result (server → client)",
+      "description": "Único mensaje con semántica de decisión. Sin scores por señal ni umbrales.",
+      "type": "object",
+      "required": [
+        "type",
+        "session_id",
+        "decision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "server_result"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "live",
+            "spoof",
+            "inconclusive"
+          ]
+        },
+        "reason_key": {
+          "type": "string",
+          "description": "motivo genérico para la UI; nunca detalla qué señal falló"
+        },
+        "reference_id": {
+          "type": "string",
+          "description": "para consultar el resultado completo por API autenticada"
+        }
+      }
+    },
+    "ServerError": {
+      "title": "server_error (server → client)",
+      "type": "object",
+      "required": [
+        "type",
+        "code"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "server_error"
+        },
+        "code": {
+          "enum": [
+            "invalid_protocol",
+            "unauthorized",
+            "session_expired",
+            "rate_limited",
+            "capacity",
+            "internal"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

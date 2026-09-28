@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liveness · banco de ataques</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<header>
+  <h1>Banco de ataques · análisis pasivo</h1>
+  <p class="sub">
+    Sube una foto o un vídeo y mira qué detectores lo pillan. Para construir el
+    dataset de ataques: foto impresa, replay en móvil, máscara.
+    · <a href="./index.html">sesión en vivo</a>
+  </p>
+</header>
+
+<main class="single">
+  <section>
+    <p class="aviso">
+      <strong>Esto no es una prueba de vida.</strong> Un archivo no puede
+      responder a un guion aleatorio —no mira al punto ni gira cuando se le
+      pide—, así que aquí sólo corren los detectores <em>pasivos</em>: textura,
+      contexto, moiré, bandeo, reflejo especular, y el paralaje si hay
+      movimiento de cabeza. Que algo salga limpio aquí no significa que pasaría
+      una sesión real.
+    </p>
+
+    <div class="controls">
+      <label>
+        Archivo
+        <input id="file" type="file" accept="image/*,video/*">
+      </label>
+      <button id="run" type="button" disabled>analizar</button>
+    </div>
+    <p id="estado" class="prompt">Elige una foto o un vídeo.</p>
+  </section>
+
+  <section id="resultado" hidden>
+    <h2>veredicto de los detectores pasivos</h2>
+    <dl id="resumen"></dl>
+
+    <h2>señales</h2>
+    <table id="senales">
+      <thead>
+        <tr><th>señal</th><th>mín</th><th>mediana</th><th>máx</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h2>ventana de pose</h2>
+    <p id="pose" class="hint">—</p>
+  </section>
+</main>
+
+<script type="module" src="./analyze.js"></script>
+</body>
+</html>

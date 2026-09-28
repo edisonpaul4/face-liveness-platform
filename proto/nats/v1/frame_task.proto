@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package liveness.nats.v1;
+
+import "nats/v1/common.proto";
+
+option go_package = "github.com/edisonpaul4/biometrics/proto/nats/v1;natsv1";
+
+// Go → Python, por session.<id>.frames. Un frame a analizar.
+//
+// No lleva el identificador de sesión: va en el subject, y el worker sabe de
+// qué sesión se trata porque aceptó su lease.
+//
+// PROHIBIDO añadir aquí: reto activo, estado de la máquina de estados,
+// umbrales, scores o veredictos. El analizador mide y no decide
+// (CLAUDE.md §3).
+message FrameTask {
+  uint64 frame_seq = 1;
+  FrameEncoding encoding = 2;
+  bytes payload = 3;
+
+  // received_at_us es el sello del SERVIDOR al recibir el frame. Es el único
+  // instante que puntúa.
+  int64 received_at_us = 4;
+  // captured_at_us es el sello del CLIENTE. Sólo sirve para alinear frames
+  // entre sí, y sólo si client_clock_trusted.
+  int64 captured_at_us = 5;
+  bool client_clock_trusted = 6;
+}
